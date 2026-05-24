@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Profilo utente — leggibile/scrivibile solo da sé stesso
+    match /userProfiles/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Inviti email — leggibili da chiunque autenticato (serve per il join automatico)
+    match /emailInvites/{emailKey} {
+      allow read: if request.auth != null;
+      allow write: if false; // solo via API Admin
+    }
+
+    // Famiglia — accessibile da owner e da membri registrati in userProfiles
+    match /families/{familyId} {
+      function isMember() {
+        return request.auth != null && (
+          request.auth.uid == familyId ||
+          (
+            exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
+            get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId
+          )
+        );
+      }
+
+      allow read, write: if isMember();
+
+      match /medicines/{medicineId} {
+        allow read, write: if isMember();
+      }
+
+      match /settings/{settingId} {
+        allow read, write: if isMember();
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
