@@ -17,9 +17,11 @@
 .env.test.local
 .env.production.local
 
-# Firebase service account keys
+# Firebase service account keys — MAI committare
 *serviceAccount*.json
 *service-account*.json
+*adminsdk*.json
+*.json.key
 
 # Debug
 npm-debug.log*
