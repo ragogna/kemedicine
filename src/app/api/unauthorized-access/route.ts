@@ -44,24 +44,18 @@ export async function POST(req: NextRequest) {
       `🕐 <b>Data/Ora:</b> ${timestamp}\n` +
       `📱 <b>Dispositivo:</b> <code>${ua}</code>`;
 
-    const familiesSnap = await adminDb.collection("families").get();
+    // collection group query: finds all "settings" docs named "main" across all families
+    // (families/{id} top-level doc may not exist explicitly — only subcollections do)
+    const settingsSnap = await adminDb.collectionGroup("settings").get();
+    const contacts: Array<{ name: string; chatId: string }> = [];
+    for (const snap of settingsSnap.docs) {
+      if (snap.id !== "main") continue;
+      const list = snap.data().telegramChatIds ?? [];
+      contacts.push(...list);
+    }
 
-    for (const familyDoc of familiesSnap.docs) {
-      const settingsDoc = await adminDb
-        .collection("families")
-        .doc(familyDoc.id)
-        .collection("settings")
-        .doc("main")
-        .get();
-
-      if (!settingsDoc.exists) continue;
-
-      const contacts: Array<{ name: string; chatId: string }> =
-        settingsDoc.data()!.telegramChatIds ?? [];
-
-      for (const contact of contacts) {
-        await sendTelegramMessage(contact.chatId, message);
-      }
+    for (const contact of contacts) {
+      await sendTelegramMessage(contact.chatId, message);
     }
   } catch {
     // silently fail — don't leak server details

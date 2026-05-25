@@ -104,8 +104,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // 3. Not authorized — notify owner via Telegram, then block
-      fetch("/api/unauthorized-access", {
+      // 3. Not authorized — await Telegram notification before blocking
+      await fetch("/api/unauthorized-access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

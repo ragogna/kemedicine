@@ -19,7 +19,14 @@
       "WebFetch(domain:www.aifa.gov.it)",
       "Bash(vercel --version)",
       "Bash(vercel --prod)",
-      "Bash(findstr /I \"schema\\\\|db\\\\|firebase\\\\|readme\")"
+      "Bash(findstr /I \"schema\\\\|db\\\\|firebase\\\\|readme\")",
+      "Bash(gh auth *)",
+      "Bash(git push *)",
+      "Bash(git filter-branch *)",
+      "Bash(git stash *)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter \"git rm --cached --ignore-unmatch kemedicine-firebase-adminsdk-fbsvc-36cbd4d711.json\" --prune-empty --tag-name-filter cat -- --all)",
+      "Bash(vercel env *)",
+      "Bash(vercel logs *)"
     ]
   }
 }

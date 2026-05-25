@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Bell, MessageCircle, Plus, Trash2, Loader2, CheckCircle,
-  Info, Users, Send, FolderOpen, ChevronDown, ChevronUp, Package2,
+  BookOpen, Sparkles, Users, Send, FolderOpen, ChevronDown, ChevronUp, Package2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FamilySettings, Workspace } from "@/types";
@@ -474,12 +474,24 @@ export default function ImpostazioniPage() {
           Salva impostazioni
         </Button>
 
-        <Link href="/impostazioni/info">
-          <Button variant="outline" className="w-full gap-2">
-            <Info className="w-4 h-4" />
-            Info &amp; Manuale — v{APP_VERSION}
-          </Button>
-        </Link>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/impostazioni/manuale">
+            <Button variant="outline" className="w-full gap-2">
+              <BookOpen className="w-4 h-4" />
+              Manuale
+            </Button>
+          </Link>
+          <Link href="/impostazioni/novita">
+            <Button variant="outline" className="w-full gap-2 border-blue-200 text-blue-600 hover:bg-blue-50">
+              <Sparkles className="w-4 h-4" />
+              Novità v{APP_VERSION}
+            </Button>
+          </Link>
+        </div>
+
+        <p className="text-xs text-center text-muted-foreground pb-2">
+          KeMedicine v{APP_VERSION} — made with ❤️ by K3kk0
+        </p>
       </div>
     </div>
   );

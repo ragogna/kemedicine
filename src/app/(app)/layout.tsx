@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -13,13 +13,16 @@ function AppGuard({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuthContext();
   const { authorized, loading: wsLoading } = useWorkspace();
   const router = useRouter();
+  const deniedRef = useRef(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace("/login");
+      // don't redirect to /login if we already handled an access denied
+      if (!deniedRef.current) router.replace("/login");
       return;
     }
     if (!authLoading && !wsLoading && authorized === false && user) {
+      deniedRef.current = true;
       signOut(auth).then(() => router.replace("/accesso-negato"));
     }
   }, [user, authLoading, authorized, wsLoading, router]);

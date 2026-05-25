@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Search, Pill, AlertTriangle, LogOut, FileDown, Loader2, Package2,
-  CheckSquare, Square, X, RefreshCw,
+  CheckSquare, Square, X, RefreshCw, HelpCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { expiryStatus } from "@/lib/utils";
@@ -274,6 +274,11 @@ export default function InventarioPage() {
                 <Link href="/scanner">
                   <Button size="sm" className="gap-1">
                     <span className="text-lg leading-none">+</span> Aggiungi
+                  </Button>
+                </Link>
+                <Link href="/impostazioni/manuale">
+                  <Button variant="ghost" size="icon" title="Manuale">
+                    <HelpCircle className="w-4 h-4" />
                   </Button>
                 </Link>
                 <Button variant="ghost" size="icon" onClick={async () => { await logout(); router.replace("/login"); }}>
