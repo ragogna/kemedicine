@@ -23,6 +23,18 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+export async function apiGet<T>(path: string): Promise<T> {
+  const token = await getAuthToken();
+  const res = await fetch(path, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Errore" }));
+    throw new Error(err.error ?? "Errore server");
+  }
+  return res.json();
+}
+
 export async function apiPostForm<T>(path: string, formData: FormData): Promise<T> {
   const token = await getAuthToken();
   const res = await fetch(path, {

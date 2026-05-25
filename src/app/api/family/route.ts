@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuthToken } from "@/lib/auth-middleware";
 import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { sanitizeEmail } from "@/lib/family";
 
@@ -16,10 +17,12 @@ if (!getApps().length) {
 }
 
 const adminDb = getFirestore();
+const adminAuth = getAuth();
 
 const InviteSchema = z.object({
   email: z.string().email(),
   action: z.enum(["add", "remove"]),
+  workspaceId: z.string().optional().default("default"),
 });
 
 export async function POST(req: NextRequest) {
@@ -37,7 +40,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
   }
 
-  // Verify caller is owner of their own family
+  // Verify caller is owner
   const profileSnap = await adminDb.doc(`userProfiles/${uid}`).get();
   const callerFamilyId = profileSnap.exists ? profileSnap.data()?.familyId : uid;
   if (callerFamilyId !== uid) {
@@ -48,10 +51,39 @@ export async function POST(req: NextRequest) {
   const inviteRef = adminDb.doc(`emailInvites/${sanitized}`);
 
   if (parsed.action === "add") {
-    await inviteRef.set({ familyId: uid, email: parsed.email, createdAt: new Date().toISOString() });
-    return NextResponse.json({ ok: true, message: `${parsed.email} aggiunto` });
+    await inviteRef.set({
+      familyId: uid,
+      workspaceId: parsed.workspaceId,
+      email: parsed.email,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Update existing user profile immediately if the user already exists
+    try {
+      const existingUser = await adminAuth.getUserByEmail(parsed.email);
+      await adminDb.doc(`userProfiles/${existingUser.uid}`).set({
+        familyId: uid,
+        workspaceId: parsed.workspaceId,
+        email: parsed.email,
+        role: "member",
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch {
+      // User doesn't have a Firebase Auth account yet — invite handles first login
+    }
+
+    return NextResponse.json({ ok: true });
   } else {
     await inviteRef.delete();
-    return NextResponse.json({ ok: true, message: `${parsed.email} rimosso` });
+
+    // Revoke existing user's access immediately
+    try {
+      const existingUser = await adminAuth.getUserByEmail(parsed.email);
+      await adminDb.doc(`userProfiles/${existingUser.uid}`).delete();
+    } catch {
+      // User not in Firebase Auth
+    }
+
+    return NextResponse.json({ ok: true });
   }
 }

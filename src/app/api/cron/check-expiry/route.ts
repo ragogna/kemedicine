@@ -62,8 +62,9 @@ export async function GET(req: NextRequest) {
     for (const medDoc of medicinesSnap.docs) {
       const med = medDoc.data() as { name: string; expiryDate: string };
       const days = differenceInDays(parseISO(med.expiryDate), today);
-      if (days < 0) expired.push({ ...med, days });
-      else if (days <= alertDays) expiring.push({ ...med, days });
+      // Notify only on the exact threshold day or on expiry day itself
+      if (days === 0) expired.push({ ...med, days });
+      else if (days === alertDays) expiring.push({ ...med, days });
     }
 
     if (!expiring.length && !expired.length) continue;

@@ -10,12 +10,25 @@ import {
   doc,
   query,
   orderBy,
-  serverTimestamp,
+  CollectionReference,
+  DocumentReference,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Medicine } from "@/types";
 
-export function useMedicines(familyId: string | null) {
+function medicinesCol(familyId: string, workspaceId: string): CollectionReference {
+  return workspaceId === "default"
+    ? collection(db, "families", familyId, "medicines")
+    : collection(db, "families", familyId, "workspaces", workspaceId, "medicines");
+}
+
+function medicineRef(familyId: string, workspaceId: string, id: string): DocumentReference {
+  return workspaceId === "default"
+    ? doc(db, "families", familyId, "medicines", id)
+    : doc(db, "families", familyId, "workspaces", workspaceId, "medicines", id);
+}
+
+export function useMedicines(familyId: string | null, workspaceId: string = "default") {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,10 +39,7 @@ export function useMedicines(familyId: string | null) {
       return;
     }
 
-    const q = query(
-      collection(db, "families", familyId, "medicines"),
-      orderBy("expiryDate", "asc")
-    );
+    const q = query(medicinesCol(familyId, workspaceId), orderBy("expiryDate", "asc"));
 
     const unsubscribe = onSnapshot(q, (snap) => {
       setMedicines(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Medicine)));
@@ -37,24 +47,25 @@ export function useMedicines(familyId: string | null) {
     });
 
     return unsubscribe;
-  }, [familyId]);
+  }, [familyId, workspaceId]);
 
-  const addMedicine = async (data: Omit<Medicine, "id">) => {
-    if (!familyId) return;
-    await addDoc(collection(db, "families", familyId, "medicines"), {
+  const addMedicine = async (data: Omit<Medicine, "id">): Promise<string> => {
+    if (!familyId) return "";
+    const ref = await addDoc(medicinesCol(familyId, workspaceId), {
       ...data,
       addedAt: new Date().toISOString(),
     });
+    return ref.id;
   };
 
   const updateMedicine = async (id: string, data: Partial<Medicine>) => {
     if (!familyId) return;
-    await updateDoc(doc(db, "families", familyId, "medicines", id), data);
+    await updateDoc(medicineRef(familyId, workspaceId, id), data);
   };
 
   const deleteMedicine = async (id: string) => {
     if (!familyId) return;
-    await deleteDoc(doc(db, "families", familyId, "medicines", id));
+    await deleteDoc(medicineRef(familyId, workspaceId, id));
   };
 
   return { medicines, loading, addMedicine, updateMedicine, deleteMedicine };

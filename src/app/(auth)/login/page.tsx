@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -9,14 +8,12 @@ import Image from "next/image";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [signing, setSigning] = useState(false);
 
   const handleLogin = async () => {
     setSigning(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      console.log("Login OK:", result.user.email);
+      await signInWithPopup(auth, googleProvider);
       window.location.href = "/inventario";
     } catch (error: unknown) {
       const code = (error as { code?: string })?.code;
@@ -32,12 +29,12 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-6">
       {/* Splash */}
       <div className="flex flex-col items-center mb-8 space-y-4">
-        <div className="relative w-40 h-40 drop-shadow-2xl">
+        <div className="relative w-36 h-36 drop-shadow-2xl">
           <Image
-            src="/KeMedicineImage.png"
+            src="/icon-192.png"
             alt="KeMedicine"
             fill
-            className="object-contain rounded-3xl"
+            className="object-contain rounded-2xl"
             priority
           />
         </div>

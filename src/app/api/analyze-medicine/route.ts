@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { verifyAuthToken } from "@/lib/auth-middleware";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -25,6 +23,10 @@ export async function POST(req: NextRequest) {
     if (image.size > MAX_SIZE_BYTES) {
       return NextResponse.json({ error: "Immagine troppo grande (max 5MB)" }, { status: 400 });
     }
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: "ANTHROPIC_API_KEY mancante" }, { status: 500 });
+    const client = new Anthropic({ apiKey });
 
     const buffer = await image.arrayBuffer();
     const base64 = Buffer.from(buffer).toString("base64");
@@ -52,7 +54,7 @@ Rispondi SOLO con un array JSON valido senza markdown:
     "brand": "casa farmaceutica",
     "activeIngredient": "principio attivo e dosaggio",
     "category": "uno tra: analgesico|antibiotico|vitamina|antinfiammatorio|antiistaminico|gastroprotettore|cardiovascolare|dermologico|altro",
-    "expiryDate": "YYYY-MM-DD se visibile, altrimenti null",
+    "expiryDate": "se visibile: YYYY-MM-DD oppure MM/YYYY (es. 06/2026). Se solo mese/anno scritto a mano, usa MM/YYYY. Altrimenti null",
     "quantity": numero intero o null,
     "unit": "pz|mg|ml|compresse|capsule|fiale|bustine|flaconi"
   }
@@ -70,7 +72,8 @@ Se non vedi medicinali, restituisci array vuoto [].`,
     const data = JSON.parse(jsonMatch[0]);
     return NextResponse.json(Array.isArray(data) ? data : [data]);
   } catch (error) {
-    console.error("Analyze error:", error);
-    return NextResponse.json({ error: "Analisi fallita" }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Analyze error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

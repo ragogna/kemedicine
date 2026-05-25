@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { useMedicines } from "@/hooks/useMedicines";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Stethoscope, Send, Loader2, Mic, MicOff, Lightbulb } from "lucide-react";
+import { Stethoscope, Send, Loader2, Mic, MicOff, Lightbulb, Leaf } from "lucide-react";
 import { toast } from "sonner";
 import { expiryStatus } from "@/lib/utils";
 import { apiPost } from "@/lib/api-client";
@@ -17,18 +16,30 @@ interface AIResponse {
   tips?: string[];
 }
 
+interface VitaminTip {
+  name: string;
+  advice: string;
+}
+
 export default function SintomiPage() {
-  const { user } = useAuth();
-  const { familyId } = useFamilyId();
-  const { medicines } = useMedicines(familyId);
+  const { familyId, workspaceId } = useFamilyId();
+  const { medicines } = useMedicines(familyId, workspaceId);
   const [query, setQuery] = useState("");
   const [response, setResponse] = useState<AIResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [vitaminTips, setVitaminTips] = useState<VitaminTip[] | null>(null);
+  const [vitaminLoading, setVitaminLoading] = useState(false);
 
   const availableMedicines = medicines.filter(
     (m) => expiryStatus(m.expiryDate) !== "expired"
   );
+
+  const vitaminCount = availableMedicines.filter((m) =>
+    /vitamin|integrat|supplement|omega|magnesio|calcio|ferro|zinco|probio|collagen/i.test(
+      `${m.name} ${m.activeIngredient ?? ""}`
+    )
+  ).length;
 
   const startListening = () => {
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
@@ -38,13 +49,11 @@ export default function SintomiPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) return;
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognition = new SpeechRecognitionAPI() as any;
     recognition.lang = "it-IT";
     recognition.continuous = false;
     recognition.interimResults = false;
-
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,6 +78,22 @@ export default function SintomiPage() {
       toast.error("Errore nella consulenza AI");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVitaminTips = async () => {
+    setVitaminLoading(true);
+    setVitaminTips(null);
+    try {
+      const data = await apiPost<{ tips: VitaminTip[] }>("/api/vitamins", {
+        medicines: availableMedicines,
+      });
+      setVitaminTips(data.tips);
+      if (data.tips.length === 0) toast.info("Nessuna vitamina/integratore nell'inventario");
+    } catch {
+      toast.error("Errore nel caricamento tips");
+    } finally {
+      setVitaminLoading(false);
     }
   };
 
@@ -105,11 +130,7 @@ export default function SintomiPage() {
                 onClick={handleSubmit}
                 disabled={loading || !query.trim()}
               >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {loading ? "Consulto in corso..." : "Chiedi consiglio"}
               </Button>
             </div>
@@ -135,7 +156,40 @@ export default function SintomiPage() {
           </div>
         </div>
 
-        {/* Risposta AI */}
+        {/* Vitamins tips button */}
+        {vitaminCount > 0 && (
+          <Button
+            variant="outline"
+            className="w-full gap-2 border-green-200 text-green-700 hover:bg-green-50"
+            onClick={handleVitaminTips}
+            disabled={vitaminLoading}
+          >
+            {vitaminLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Leaf className="w-4 h-4" />}
+            {vitaminLoading ? "Caricamento..." : `Tips stagionali — ${vitaminCount} vitamine/integratori`}
+          </Button>
+        )}
+
+        {/* Vitamin tips response */}
+        {vitaminTips && vitaminTips.length > 0 && (
+          <Card className="border-green-200 bg-green-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2 text-green-700">
+                <Leaf className="w-4 h-4" />
+                Consigli vitamini di stagione
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {vitaminTips.map((tip, i) => (
+                <div key={i} className="space-y-0.5">
+                  <p className="text-sm font-medium text-green-800">{tip.name}</p>
+                  <p className="text-xs text-green-700">{tip.advice}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Risposta AI sintomi */}
         {response && (
           <Card className="border-blue-200 bg-blue-50/50">
             <CardHeader className="pb-2">
@@ -165,7 +219,7 @@ export default function SintomiPage() {
 
         {/* Disclaimer */}
         <p className="text-xs text-muted-foreground text-center pb-2">
-          ⚠️ Informazioni a scopo orientativo. Consulta un medico per diagnosi e terapie.
+          Informazioni a scopo orientativo. Consulta un medico per diagnosi e terapie.
         </p>
       </div>
     </div>

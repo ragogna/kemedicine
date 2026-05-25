@@ -11,7 +11,7 @@ const MedicineSchema = z.object({
   brand: z.string().max(200).optional(),
   activeIngredient: z.string().max(300).optional(),
   category: z.string().max(50),
-  expiryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  expiryDate: z.string(),
   quantity: z.number().optional(),
   unit: z.string().max(20).optional(),
 });

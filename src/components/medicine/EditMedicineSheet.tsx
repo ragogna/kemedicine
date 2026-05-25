@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { parseExpiryDate, isoToDisplayDate } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,43 +10,64 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import { Medicine, MedicineCategory } from "@/types";
 import { CATEGORY_LABELS } from "@/lib/utils";
+import { BoxConfig, DEFAULT_BOX_CONFIGS, resolveBoxConfig } from "@/lib/box-config";
 import { toast } from "sonner";
+
 
 interface Props {
   medicine: Medicine | null;
   open: boolean;
   onClose: () => void;
   onSave: (id: string, data: Partial<Medicine>) => Promise<void>;
+  boxConfigs?: BoxConfig[];
 }
 
-export function EditMedicineSheet({ medicine, open, onClose, onSave }: Props) {
+export function EditMedicineSheet({ medicine, open, onClose, onSave, boxConfigs }: Props) {
+  const configs = boxConfigs ?? DEFAULT_BOX_CONFIGS;
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<Medicine>>({});
 
-  const handleOpen = (isOpen: boolean) => {
-    if (isOpen && medicine) {
+  useEffect(() => {
+    if (open && medicine) {
+      // normalize legacy "Box 1" format to config id
+      const resolvedBox = resolveBoxConfig(medicine.box, configs)?.id ?? "";
       setForm({
         name: medicine.name,
         brand: medicine.brand,
         activeIngredient: medicine.activeIngredient,
         category: medicine.category,
-        expiryDate: medicine.expiryDate,
+        expiryDate: isoToDisplayDate(medicine.expiryDate ?? ""),
         quantity: medicine.quantity,
         unit: medicine.unit,
         notes: medicine.notes,
+        box: resolvedBox,
       });
     }
-    if (!isOpen) onClose();
-  };
+  }, [open, medicine, configs]);
 
   const handleSave = async () => {
     if (!medicine || !form.name || !form.expiryDate) {
       toast.error("Nome e data scadenza obbligatori");
       return;
     }
+    const expiryNormalized = parseExpiryDate(form.expiryDate ?? "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryNormalized)) {
+      toast.error("Formato data non valido. Usa MM/AAAA o GG/MM/AAAA");
+      return;
+    }
     setSaving(true);
     try {
-      await onSave(medicine.id, form);
+      await onSave(medicine.id, {
+        name: form.name ?? "",
+        brand: form.brand ?? "",
+        activeIngredient: form.activeIngredient ?? "",
+        category: form.category,
+        expiryDate: expiryNormalized,
+        quantity: Number(form.quantity) || 0,
+        unit: form.unit ?? "pz",
+        notes: form.notes ?? "",
+        box: (form as { box?: string }).box || undefined,
+      });
       toast.success("Medicinale aggiornato");
       onClose();
     } catch {
@@ -56,7 +78,7 @@ export function EditMedicineSheet({ medicine, open, onClose, onSave }: Props) {
   };
 
   return (
-    <Sheet open={open} onOpenChange={handleOpen}>
+    <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl">
         <SheetHeader className="mb-4">
           <SheetTitle>Modifica medicinale</SheetTitle>
@@ -88,7 +110,12 @@ export function EditMedicineSheet({ medicine, open, onClose, onSave }: Props) {
           </div>
           <div className="space-y-1">
             <Label>Data scadenza *</Label>
-            <Input type="date" value={form.expiryDate ?? ""} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+            <Input
+              placeholder="MM/AAAA o GG/MM/AAAA"
+              value={form.expiryDate ?? ""}
+              onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">Es: 06/2026, 06/26, 2026-06-30</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
@@ -111,6 +138,27 @@ export function EditMedicineSheet({ medicine, open, onClose, onSave }: Props) {
             <Label>Note</Label>
             <Input value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
+          <div className="space-y-1">
+            <Label>Posizione (box)</Label>
+            <Select
+              value={(form as { box?: string }).box ?? ""}
+              onValueChange={(v) => setForm({ ...form, box: v } as typeof form & { box: string })}
+            >
+              <SelectTrigger><SelectValue placeholder="Nessun box" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">— Nessun box</SelectItem>
+                {configs.map((bc) => (
+                  <SelectItem key={bc.id} value={bc.id}>
+                    <span className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: bc.color }} />
+                      {bc.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button className="w-full" onClick={handleSave} disabled={saving}>
             {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             Salva modifiche

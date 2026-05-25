@@ -3,7 +3,23 @@
     "allow": [
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git rm *)",
+      "Bash(npx vercel *)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(python3 -c \"from PIL import Image; img = Image.open\\('public/KeMedicine.png'\\); print\\(img.size\\)\")",
+      "Bash(magick identify *)",
+      "Bash(Remove-Item *)",
+      "WebSearch",
+      "WebFetch(domain:medicinali.aifa.gov.it)",
+      "WebFetch(domain:farmaci.agenziafarmaco.gov.it)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:servizionline.aifa.gov.it)",
+      "WebFetch(domain:www.aifa.gov.it)",
+      "Bash(vercel --version)",
+      "Bash(vercel --prod)",
+      "Bash(findstr /I \"schema\\\\|db\\\\|firebase\\\\|readme\")"
     ]
   }
 }

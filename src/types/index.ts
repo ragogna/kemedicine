@@ -1,9 +1,7 @@
-export interface FamilyMember {
-  id: string;
-  name: string;
-  avatar?: string;
-  role: "admin" | "member";
-  telegramChatId?: string;
+export interface MedicineInfo {
+  indicazioni: string;
+  effettiCollaterali: string;
+  modalitaUso: string;
 }
 
 export interface Medicine {
@@ -16,14 +14,13 @@ export interface Medicine {
   expiryDate: string; // ISO date string
   quantity: number;
   unit: string;
-  photoUrl?: string;
   barcode?: string;
-  aicCode?: string;
   notes?: string;
-  assignedTo?: string; // memberId or null = tutti
-  addedBy: string; // memberId
-  addedAt: string; // ISO date string
-  leafletUrl?: string;
+  addedBy: string;
+  addedAt: string;
+  box?: string; // box config id: "box1", "box2", ... or undefined = non assegnato
+  importBatchId?: string; // groups medicines added in the same scan session
+  info?: MedicineInfo; // AI-generated medicine info, cached in Firestore
 }
 
 export type MedicineCategory =
@@ -40,14 +37,14 @@ export type MedicineCategory =
 export interface Family {
   id: string;
   name: string;
-  members: string[]; // memberIds
+  members: string[];
   createdBy: string;
   createdAt: string;
   settings: FamilySettings;
 }
 
 export interface FamilySettings {
-  alertDaysBefore: number; // default 30
+  alertDaysBefore: number;
   telegramBotToken?: string;
   telegramChatIds: TelegramContact[];
 }
@@ -57,14 +54,8 @@ export interface TelegramContact {
   chatId: string;
 }
 
-export interface SymptomQuery {
-  symptoms: string;
-  availableMedicines: Medicine[];
-}
-
-export interface MedicineRecommendation {
-  medicine: Medicine;
-  reason: string;
-  efficacyRank: number; // 1 = più efficace
-  warnings?: string[];
+export interface Workspace {
+  id: string;
+  name: string;
+  members: string[];
 }
