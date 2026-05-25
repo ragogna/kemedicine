@@ -1,16 +1,37 @@
 "use client";
 
+import { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import {
+  ArrowLeft, BookOpen, Package2, RefreshCw, Camera, ImageIcon,
+  Sparkles, Barcode, Mic, Send, Leaf,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-const SECTIONS = [
+function Icon({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center justify-center w-4 h-4 align-middle mx-0.5 relative -top-px">
+      {children}
+    </span>
+  );
+}
+
+const SECTIONS: { icon: string; title: string; body: ReactNode }[] = [
   {
     icon: "📦",
     title: "Aggiungere un medicinale",
-    body: "Vai su Aggiungi → scatta una foto della scatola o scegli dalla galleria → premi Analizza con AI: le informazioni vengono compilate automaticamente. Puoi anche inserire tutto manualmente o scansionare il codice a barre.",
+    body: (
+      <>
+        Vai su <strong>Aggiungi</strong> → tocca
+        <Icon><Camera className="w-3.5 h-3.5" /></Icon><strong>Fotocamera</strong> o
+        <Icon><ImageIcon className="w-3.5 h-3.5" /></Icon><strong>Galleria</strong> per scegliere una foto →
+        premi <Icon><Sparkles className="w-3.5 h-3.5" /></Icon><strong>Analizza con AI</strong>: le informazioni vengono compilate automaticamente.
+        Puoi anche inserire tutto manualmente o usare
+        <Icon><Barcode className="w-3.5 h-3.5" /></Icon><strong>Scansiona codice a barre</strong>.
+      </>
+    ),
   },
   {
     icon: "🔍",
@@ -20,17 +41,37 @@ const SECTIONS = [
   {
     icon: "🗃️",
     title: "Gestione Box",
-    body: "Tocca l'icona 📦 in alto nell'inventario per attivare la selezione massiva. Usa i pulsanti rapidi Senza box (seleziona tutti i medicinali non assegnati) e Per sessione (seleziona tutti quelli aggiunti con la stessa foto). Personalizza nome e colore di ogni box in Impostazioni → Gestione Box.",
+    body: (
+      <>
+        Tocca
+        <Icon><Package2 className="w-3.5 h-3.5" /></Icon>
+        in alto nell&apos;inventario per attivare la selezione massiva. Usa i pulsanti rapidi <strong>Senza box</strong> (seleziona tutti i medicinali non assegnati) e <strong>Per sessione</strong> (seleziona tutti quelli aggiunti con la stessa foto). Personalizza nome e colore di ogni box in <strong>Impostazioni → Gestione Box</strong>.
+      </>
+    ),
   },
   {
     icon: "💊",
     title: "Scheda farmaco AI",
-    body: "Ogni medicinale aggiunto riceve automaticamente una scheda con indicazioni, effetti collaterali e modalità d'uso generata dall'AI. Tocca Scheda farmaco nella card per espanderla. Usa il pulsante 🔄 in alto nell'inventario per aggiornare i medicinali che non hanno ancora la scheda.",
+    body: (
+      <>
+        Ogni medicinale aggiunto riceve automaticamente una scheda con indicazioni, effetti collaterali e modalità d&apos;uso generata dall&apos;AI. Tocca <strong>Scheda farmaco</strong> nella card per espanderla. Usa
+        <Icon><RefreshCw className="w-3.5 h-3.5" /></Icon>
+        in alto nell&apos;inventario per aggiornare i medicinali che non hanno ancora la scheda.
+      </>
+    ),
   },
   {
     icon: "🩺",
     title: "Consulta Sintomi",
-    body: "Descrivi come ti senti (o usa il microfono) e l'AI suggerisce i medicinali disponibili nell'inventario ordinati per efficacia, con eventuali avvertenze sulle interazioni.",
+    body: (
+      <>
+        Descrivi come ti senti (o usa
+        <Icon><Mic className="w-3.5 h-3.5" /></Icon>
+        il microfono) e premi
+        <Icon><Send className="w-3.5 h-3.5" /></Icon>
+        <strong>Chiedi consiglio</strong>: l&apos;AI suggerisce i medicinali disponibili nell&apos;inventario ordinati per efficacia, con eventuali avvertenze sulle interazioni.
+      </>
+    ),
   },
   {
     icon: "🔔",
@@ -40,7 +81,13 @@ const SECTIONS = [
   {
     icon: "💡",
     title: "Tips vitamine",
-    body: "L'AI analizza le vitamine nell'inventario e ti suggerisce il periodo migliore per consumarle prima della scadenza, in base alla stagionalità.",
+    body: (
+      <>
+        Nella sezione <strong>Consulta Sintomi</strong> tocca
+        <Icon><Leaf className="w-3.5 h-3.5" /></Icon>
+        <strong>Tips stagionali</strong>: l&apos;AI analizza le vitamine nell&apos;inventario e suggerisce il periodo migliore per consumarle prima della scadenza, in base alla stagionalità.
+      </>
+    ),
   },
   {
     icon: "🗂️",
@@ -77,7 +124,7 @@ export default function ManualePage() {
               <div key={i}>
                 {i > 0 && <Separator className="mb-4" />}
                 <p className="font-semibold text-foreground mb-1">{s.icon} {s.title}</p>
-                <p>{s.body}</p>
+                <p className="leading-relaxed">{s.body}</p>
               </div>
             ))}
           </CardContent>
