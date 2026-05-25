@@ -23,7 +23,11 @@ function AppGuard({ children }: { children: React.ReactNode }) {
     }
     if (!authLoading && !wsLoading && authorized === false && user) {
       deniedRef.current = true;
-      signOut(auth).then(() => router.replace("/accesso-negato"));
+      fetch("/api/unauthorized-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, userAgent: navigator.userAgent }),
+      }).finally(() => signOut(auth).then(() => router.replace("/accesso-negato")));
     }
   }, [user, authLoading, authorized, wsLoading, router]);
 

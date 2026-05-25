@@ -36,34 +36,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
   }
 
-  // Only owner (uid === familyId) can test
-  const profileDoc = await adminDb.collection("userProfiles").doc(uid).get();
-  if (!profileDoc.exists) return NextResponse.json({ error: "Profilo non trovato" }, { status: 404 });
-  const familyId = profileDoc.data()!.familyId as string;
-  if (uid !== familyId) return NextResponse.json({ error: "Solo il proprietario può testare" }, { status: 403 });
+  try {
+    const profileDoc = await adminDb.collection("userProfiles").doc(uid).get();
+    if (!profileDoc.exists) return NextResponse.json({ error: "Profilo non trovato" }, { status: 404 });
+    const familyId = profileDoc.data()!.familyId as string;
+    if (uid !== familyId) return NextResponse.json({ error: "Solo il proprietario può testare" }, { status: 403 });
 
-  const settingsDoc = await adminDb
-    .collection("families").doc(familyId)
-    .collection("settings").doc("main")
-    .get();
+    const settingsDoc = await adminDb
+      .collection("families").doc(familyId)
+      .collection("settings").doc("main")
+      .get();
 
-  if (!settingsDoc.exists) return NextResponse.json({ error: "Nessuna impostazione trovata" }, { status: 404 });
+    if (!settingsDoc.exists) return NextResponse.json({ error: "Nessuna impostazione trovata" }, { status: 404 });
 
-  const contacts: Array<{ name: string; chatId: string }> = settingsDoc.data()!.telegramChatIds ?? [];
-  if (!contacts.length) return NextResponse.json({ error: "Nessun contatto Telegram configurato" }, { status: 400 });
+    const contacts: Array<{ name: string; chatId: string }> = settingsDoc.data()!.telegramChatIds ?? [];
+    if (!contacts.length) return NextResponse.json({ error: "Nessun contatto Telegram configurato" }, { status: 400 });
 
-  const message = `✅ <b>KeMedicine — Test Notifica</b>\n\nIl sistema di avvisi Telegram è attivo e funzionante!\n\nRiceverai notifiche automatiche ogni mattina per medicinali in scadenza.\n\n<i>Test inviato manualmente dall'app.</i>`;
+    const message = `✅ <b>KeMedicine — Test Notifica</b>\n\nIl sistema di avvisi Telegram è attivo e funzionante!\n\nRiceverai notifiche automatiche ogni mattina per medicinali in scadenza.\n\n<i>Test inviato manualmente dall'app.</i>`;
 
-  const errors: string[] = [];
-  let sent = 0;
-  for (const contact of contacts) {
-    const err = await sendTelegramMessage(contact.chatId, message);
-    if (err) errors.push(`${contact.name} (${contact.chatId}): ${err}`);
-    else sent++;
+    const errors: string[] = [];
+    let sent = 0;
+    for (const contact of contacts) {
+      const err = await sendTelegramMessage(contact.chatId, message);
+      if (err) errors.push(`${contact.name} (${contact.chatId}): ${err}`);
+      else sent++;
+    }
+
+    if (errors.length)
+      return NextResponse.json({ ok: false, sent, errors }, { status: 500 });
+
+    return NextResponse.json({ ok: true, sent });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: `Errore interno: ${msg}` }, { status: 500 });
   }
-
-  if (errors.length)
-    return NextResponse.json({ ok: false, sent, errors }, { status: 500 });
-
-  return NextResponse.json({ ok: true, sent });
 }
