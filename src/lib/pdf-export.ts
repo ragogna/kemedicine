@@ -111,10 +111,12 @@ export async function exportMedicinePDF(
         ? hexToRgb(config.color)
         : [80, 80, 80];
 
-      // Cut-guide border
-      doc.setDrawColor(190, 190, 190);
-      doc.setLineWidth(0.2);
+      // Dashed cut-guide border
+      doc.setDrawColor(160, 160, 160);
+      doc.setLineWidth(0.3);
+      doc.setLineDashPattern([1.5, 1.5], 0);
       doc.rect(ox, oy, fw, fh);
+      doc.setLineDashPattern([], 0);
 
       // Box name
       doc.setFontSize(9);
