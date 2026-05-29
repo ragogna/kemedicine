@@ -54,8 +54,8 @@ export default function InventarioPage() {
   const [editMedicine, setEditMedicine] = useState<Medicine | null>(null);
   const [exporting, setExporting] = useState(false);
   const [pdfMenuState, setPdfMenuState] = useState<"closed" | "menu" | "custom">("closed");
-  const [customW, setCustomW] = useState("85");
-  const [customH, setCustomH] = useState("55");
+  const [customW, setCustomW] = useState("10");
+  const [customH, setCustomH] = useState("10");
   const pdfMenuRef = useRef<HTMLDivElement>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -126,7 +126,7 @@ export default function InventarioPage() {
       toast.error("Dimensioni non valide");
       return;
     }
-    handleExportPDF("label", { width: w, height: h });
+    handleExportPDF("label", { width: w * 10, height: h * 10 });
   };
 
   const handleDelete = async (id: string) => {
@@ -336,25 +336,27 @@ export default function InventarioPage() {
                           <p className="text-xs font-medium">Dimensioni cartellino</p>
                           <div className="flex items-center gap-2">
                             <div className="flex-1">
-                              <label className="text-xs text-muted-foreground">Larghezza (mm)</label>
+                              <label className="text-xs text-muted-foreground">L (cm)</label>
                               <Input
                                 type="number"
                                 value={customW}
                                 onChange={(e) => setCustomW(e.target.value)}
                                 className="h-7 text-sm mt-0.5"
-                                min={10}
-                                max={400}
+                                min={1}
+                                max={40}
+                                step={0.5}
                               />
                             </div>
                             <div className="flex-1">
-                              <label className="text-xs text-muted-foreground">Altezza (mm)</label>
+                              <label className="text-xs text-muted-foreground">H (cm)</label>
                               <Input
                                 type="number"
                                 value={customH}
                                 onChange={(e) => setCustomH(e.target.value)}
                                 className="h-7 text-sm mt-0.5"
-                                min={10}
-                                max={400}
+                                min={1}
+                                max={40}
+                                step={0.5}
                               />
                             </div>
                           </div>

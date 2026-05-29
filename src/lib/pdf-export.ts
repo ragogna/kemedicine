@@ -75,10 +75,12 @@ export async function exportMedicinePDF(
   const isoDate = new Date().toISOString().slice(0, 10);
 
   if (mode === "label" && labelSize) {
-    const orientation = labelSize.width > labelSize.height ? "landscape" : "portrait";
-    const doc = new jsPDF({ unit: "mm", format: [labelSize.width, labelSize.height], orientation });
+    // portrait: smaller dim first to avoid jsPDF recursion on equal/landscape formats
+    const fw = Math.min(labelSize.width, labelSize.height);
+    const fh = Math.max(labelSize.width, labelSize.height);
+    const doc = new jsPDF({ unit: "mm", format: [fw, fh] });
     const margin = 4;
-    const usableW = labelSize.width - margin * 2;
+    const usableW = fw - margin * 2;
     const expiryColW = Math.min(28, usableW * 0.32);
 
     const sortedGroups = buildBoxGroups(medicines, boxConfigs);
@@ -93,17 +95,17 @@ export async function exportMedicinePDF(
         ? hexToRgb(config.color)
         : [80, 80, 80];
 
-      // box name header
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(boxColor[0], boxColor[1], boxColor[2]);
       doc.text(boxName, margin, margin + 4);
 
-      // print date small right
+      // date right-aligned (manual to avoid jsPDF align recursion)
       doc.setFontSize(6);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(160, 160, 160);
-      doc.text(date, labelSize.width - margin, margin + 4, { align: "right" });
+      const dateW = doc.getTextWidth(date);
+      doc.text(date, fw - margin - dateW, margin + 4);
 
       doc.setFont("helvetica", "normal");
 
@@ -114,7 +116,7 @@ export async function exportMedicinePDF(
         body: sorted.map((m) => [m.name, formatDate(m.expiryDate)]),
         startY: margin + 7,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 7, cellPadding: 1.5 },
+        styles: { fontSize: 7, cellPadding: 1.5, overflow: "ellipsize" },
         headStyles: { fillColor: boxColor, textColor: 255, fontSize: 7, cellPadding: 1.5 },
         columnStyles: { 1: { cellWidth: expiryColW, halign: "center" } },
         tableWidth: usableW,
