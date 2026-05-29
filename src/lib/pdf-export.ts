@@ -2,7 +2,9 @@ import { Medicine } from "@/types";
 import { BoxConfig, resolveBoxConfig } from "@/lib/box-config";
 import { expiryStatus, formatDate, CATEGORY_LABELS } from "@/lib/utils";
 
-export type PdfExportMode = "alphabetical" | "by-box";
+export type PdfExportMode = "alphabetical" | "by-box" | "label";
+
+export interface LabelSize { width: number; height: number }
 
 function hexToRgb(hex: string): [number, number, number] {
   return [
@@ -44,17 +46,85 @@ function applyStatusStyle(data: any, statusColIndex: number) {
   }
 }
 
+function buildBoxGroups(medicines: Medicine[], boxConfigs: BoxConfig[]) {
+  const groups = new Map<string, { config: BoxConfig | null; items: Medicine[] }>();
+  for (const m of medicines) {
+    const key = m.box ?? "__none__";
+    if (!groups.has(key)) {
+      groups.set(key, { config: resolveBoxConfig(m.box, boxConfigs), items: [] });
+    }
+    groups.get(key)!.items.push(m);
+  }
+  return [...groups.entries()].sort(([keyA, a], [keyB, b]) => {
+    if (keyA === "__none__") return 1;
+    if (keyB === "__none__") return -1;
+    return (a.config?.name ?? keyA).localeCompare(b.config?.name ?? keyB, "it");
+  });
+}
+
 export async function exportMedicinePDF(
   medicines: Medicine[],
   mode: PdfExportMode = "alphabetical",
-  boxConfigs: BoxConfig[] = []
+  boxConfigs: BoxConfig[] = [],
+  labelSize?: LabelSize
 ): Promise<void> {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
 
-  const doc = new jsPDF();
   const date = new Date().toLocaleDateString("it-IT");
   const isoDate = new Date().toISOString().slice(0, 10);
+
+  if (mode === "label" && labelSize) {
+    const doc = new jsPDF({ unit: "mm", format: [labelSize.width, labelSize.height] });
+    const margin = 4;
+    const usableW = labelSize.width - margin * 2;
+    const expiryColW = Math.min(28, usableW * 0.32);
+
+    const sortedGroups = buildBoxGroups(medicines, boxConfigs);
+    let first = true;
+
+    for (const [, { config, items }] of sortedGroups) {
+      if (!first) doc.addPage([labelSize.width, labelSize.height]);
+      first = false;
+
+      const boxName = config?.name ?? "Senza box";
+      const boxColor: [number, number, number] = config?.color
+        ? hexToRgb(config.color)
+        : [80, 80, 80];
+
+      // box name header
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(boxColor[0], boxColor[1], boxColor[2]);
+      doc.text(boxName, margin, margin + 4);
+
+      // print date small right
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(160, 160, 160);
+      doc.text(date, labelSize.width - margin, margin + 4, { align: "right" });
+
+      doc.setFont("helvetica", "normal");
+
+      const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name, "it"));
+
+      autoTable(doc, {
+        head: [["Nome", "Scadenza"]],
+        body: sorted.map((m) => [m.name, formatDate(m.expiryDate)]),
+        startY: margin + 7,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: boxColor, textColor: 255, fontSize: 7, cellPadding: 1.5 },
+        columnStyles: { 1: { cellWidth: expiryColW, halign: "center" } },
+        tableWidth: usableW,
+      });
+    }
+
+    doc.save(`kemedicine-cartellini-${isoDate}.pdf`);
+    return;
+  }
+
+  const doc = new jsPDF();
 
   const expired = medicines.filter((m) => expiryStatus(m.expiryDate) === "expired").length;
   const expiring = medicines.filter((m) =>
@@ -94,23 +164,9 @@ export async function exportMedicinePDF(
       didParseCell: (data) => applyStatusStyle(data, 6),
     });
   } else {
-    const groups = new Map<string, { config: BoxConfig | null; items: Medicine[] }>();
-
-    for (const m of medicines) {
-      const key = m.box ?? "__none__";
-      if (!groups.has(key)) {
-        groups.set(key, { config: resolveBoxConfig(m.box, boxConfigs), items: [] });
-      }
-      groups.get(key)!.items.push(m);
-    }
-
-    const sortedGroups = [...groups.entries()].sort(([keyA, a], [keyB, b]) => {
-      if (keyA === "__none__") return 1;
-      if (keyB === "__none__") return -1;
-      return (a.config?.name ?? keyA).localeCompare(b.config?.name ?? keyB, "it");
-    });
-
+    const sortedGroups = buildBoxGroups(medicines, boxConfigs);
     let first = true;
+
     for (const [, { config, items }] of sortedGroups) {
       if (!first) doc.addPage();
       first = false;

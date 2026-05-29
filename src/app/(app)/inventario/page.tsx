@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Search, Pill, AlertTriangle, LogOut, FileDown, Loader2, Package2,
-  CheckSquare, Square, X, RefreshCw, HelpCircle,
+  CheckSquare, Square, X, RefreshCw, HelpCircle, Tag,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { expiryStatus } from "@/lib/utils";
@@ -23,7 +23,7 @@ import { writeBatch, doc, updateDoc, getDoc } from "firebase/firestore";
 import { Medicine, MedicineInfo } from "@/types";
 import { BoxConfig, DEFAULT_BOX_CONFIGS, resolveBoxConfig } from "@/lib/box-config";
 import Link from "next/link";
-import { exportMedicinePDF, PdfExportMode } from "@/lib/pdf-export";
+import { exportMedicinePDF, PdfExportMode, LabelSize } from "@/lib/pdf-export";
 import { apiPost } from "@/lib/api-client";
 
 type SortMode = "scadenza" | "alfabetico" | "categoria";
@@ -53,7 +53,9 @@ export default function InventarioPage() {
   const [sort, setSort] = useState<SortMode>("scadenza");
   const [editMedicine, setEditMedicine] = useState<Medicine | null>(null);
   const [exporting, setExporting] = useState(false);
-  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  const [pdfMenuState, setPdfMenuState] = useState<"closed" | "menu" | "custom">("closed");
+  const [customW, setCustomW] = useState("85");
+  const [customH, setCustomH] = useState("55");
   const pdfMenuRef = useRef<HTMLDivElement>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -64,15 +66,15 @@ export default function InventarioPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!pdfMenuOpen) return;
+    if (pdfMenuState === "closed") return;
     const onDown = (e: MouseEvent) => {
       if (pdfMenuRef.current && !pdfMenuRef.current.contains(e.target as Node)) {
-        setPdfMenuOpen(false);
+        setPdfMenuState("closed");
       }
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [pdfMenuOpen]);
+  }, [pdfMenuState]);
 
   // Load box configs from Firestore
   useEffect(() => {
@@ -104,16 +106,26 @@ export default function InventarioPage() {
     exitSelectionMode();
   };
 
-  const handleExportPDF = async (mode: PdfExportMode) => {
-    setPdfMenuOpen(false);
+  const handleExportPDF = async (mode: PdfExportMode, labelSize?: LabelSize) => {
+    setPdfMenuState("closed");
     setExporting(true);
     try {
-      await exportMedicinePDF(medicines, mode, boxConfigs);
+      await exportMedicinePDF(medicines, mode, boxConfigs, labelSize);
     } catch {
       toast.error("Errore nell'esportazione PDF");
     } finally {
       setExporting(false);
     }
+  };
+
+  const handleExportLabel = () => {
+    const w = parseFloat(customW);
+    const h = parseFloat(customH);
+    if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
+      toast.error("Dimensioni non valide");
+      return;
+    }
+    handleExportPDF("label", { width: w, height: h });
   };
 
   const handleDelete = async (id: string) => {
@@ -280,28 +292,76 @@ export default function InventarioPage() {
                 <div className="relative" ref={pdfMenuRef}>
                   <Button
                     variant="ghost" size="icon"
-                    onClick={() => setPdfMenuOpen((v) => !v)}
+                    onClick={() => setPdfMenuState((v) => v === "closed" ? "menu" : "closed")}
                     disabled={exporting || medicines.length === 0}
                     title="Esporta PDF"
                   >
                     {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
                   </Button>
-                  {pdfMenuOpen && (
-                    <div className="absolute right-0 top-full mt-1 bg-background border border-border rounded-lg shadow-lg py-1 z-50 min-w-[190px]">
-                      <button
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
-                        onClick={() => handleExportPDF("alphabetical")}
-                      >
-                        <span className="text-xs font-bold text-muted-foreground">A→Z</span>
-                        Ordine alfabetico
-                      </button>
-                      <button
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
-                        onClick={() => handleExportPDF("by-box")}
-                      >
-                        <Package2 className="w-3.5 h-3.5 text-muted-foreground" />
-                        Per box
-                      </button>
+                  {pdfMenuState !== "closed" && (
+                    <div className="absolute right-0 top-full mt-1 bg-background border border-border rounded-lg shadow-lg py-1 z-50 min-w-[200px]">
+                      {pdfMenuState === "menu" ? (
+                        <>
+                          <button
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                            onClick={() => handleExportPDF("alphabetical")}
+                          >
+                            <span className="text-xs font-bold text-muted-foreground">A→Z</span>
+                            Ordine alfabetico
+                          </button>
+                          <button
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                            onClick={() => handleExportPDF("by-box")}
+                          >
+                            <Package2 className="w-3.5 h-3.5 text-muted-foreground" />
+                            Per box
+                          </button>
+                          <button
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                            onClick={() => setPdfMenuState("custom")}
+                          >
+                            <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+                            Cartellino personalizzato
+                          </button>
+                        </>
+                      ) : (
+                        <div className="px-3 py-2 space-y-2">
+                          <button
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-1"
+                            onClick={() => setPdfMenuState("menu")}
+                          >
+                            <span>←</span> Indietro
+                          </button>
+                          <p className="text-xs font-medium">Dimensioni cartellino</p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <label className="text-xs text-muted-foreground">Larghezza (mm)</label>
+                              <Input
+                                type="number"
+                                value={customW}
+                                onChange={(e) => setCustomW(e.target.value)}
+                                className="h-7 text-sm mt-0.5"
+                                min={10}
+                                max={400}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-xs text-muted-foreground">Altezza (mm)</label>
+                              <Input
+                                type="number"
+                                value={customH}
+                                onChange={(e) => setCustomH(e.target.value)}
+                                className="h-7 text-sm mt-0.5"
+                                min={10}
+                                max={400}
+                              />
+                            </div>
+                          </div>
+                          <Button size="sm" className="w-full h-7 text-xs" onClick={handleExportLabel}>
+                            Genera PDF
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
