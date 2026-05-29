@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMedicines } from "@/hooks/useMedicines";
 import { useFamilyId } from "@/hooks/useFamilyId";
@@ -23,7 +23,7 @@ import { writeBatch, doc, updateDoc, getDoc } from "firebase/firestore";
 import { Medicine, MedicineInfo } from "@/types";
 import { BoxConfig, DEFAULT_BOX_CONFIGS, resolveBoxConfig } from "@/lib/box-config";
 import Link from "next/link";
-import { exportMedicinePDF } from "@/lib/pdf-export";
+import { exportMedicinePDF, PdfExportMode } from "@/lib/pdf-export";
 import { apiPost } from "@/lib/api-client";
 
 type SortMode = "scadenza" | "alfabetico" | "categoria";
@@ -53,6 +53,8 @@ export default function InventarioPage() {
   const [sort, setSort] = useState<SortMode>("scadenza");
   const [editMedicine, setEditMedicine] = useState<Medicine | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  const pdfMenuRef = useRef<HTMLDivElement>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBatchPicker, setShowBatchPicker] = useState(false);
@@ -60,6 +62,17 @@ export default function InventarioPage() {
   const [refreshingInfo, setRefreshingInfo] = useState(false);
   const [refreshProgress, setRefreshProgress] = useState<{ done: number; total: number } | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!pdfMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (pdfMenuRef.current && !pdfMenuRef.current.contains(e.target as Node)) {
+        setPdfMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [pdfMenuOpen]);
 
   // Load box configs from Firestore
   useEffect(() => {
@@ -91,10 +104,11 @@ export default function InventarioPage() {
     exitSelectionMode();
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (mode: PdfExportMode) => {
+    setPdfMenuOpen(false);
     setExporting(true);
     try {
-      await exportMedicinePDF(medicines);
+      await exportMedicinePDF(medicines, mode, boxConfigs);
     } catch {
       toast.error("Errore nell'esportazione PDF");
     } finally {
@@ -263,14 +277,34 @@ export default function InventarioPage() {
                 >
                   <Package2 className="w-4 h-4" />
                 </Button>
-                <Button
-                  variant="ghost" size="icon"
-                  onClick={handleExportPDF}
-                  disabled={exporting || medicines.length === 0}
-                  title="Esporta PDF"
-                >
-                  {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-                </Button>
+                <div className="relative" ref={pdfMenuRef}>
+                  <Button
+                    variant="ghost" size="icon"
+                    onClick={() => setPdfMenuOpen((v) => !v)}
+                    disabled={exporting || medicines.length === 0}
+                    title="Esporta PDF"
+                  >
+                    {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                  </Button>
+                  {pdfMenuOpen && (
+                    <div className="absolute right-0 top-full mt-1 bg-background border border-border rounded-lg shadow-lg py-1 z-50 min-w-[190px]">
+                      <button
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                        onClick={() => handleExportPDF("alphabetical")}
+                      >
+                        <span className="text-xs font-bold text-muted-foreground">A→Z</span>
+                        Ordine alfabetico
+                      </button>
+                      <button
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                        onClick={() => handleExportPDF("by-box")}
+                      >
+                        <Package2 className="w-3.5 h-3.5 text-muted-foreground" />
+                        Per box
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <Link href="/scanner">
                   <Button size="sm" className="gap-1">
                     <span className="text-lg leading-none">+</span> Aggiungi

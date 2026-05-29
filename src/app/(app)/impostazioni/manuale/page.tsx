@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, BookOpen, Package2, RefreshCw, Camera, ImageIcon,
-  Sparkles, Barcode, Mic, Send, Leaf,
+  Sparkles, Barcode, Mic, Send, Leaf, FileDown,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -86,6 +86,17 @@ const SECTIONS: { icon: string; title: string; body: ReactNode }[] = [
         Nella sezione <strong>Consulta Sintomi</strong> tocca
         <Icon><Leaf className="w-3.5 h-3.5" /></Icon>
         <strong>Tips stagionali</strong>: l&apos;AI analizza le vitamine nell&apos;inventario e suggerisce il periodo migliore per consumarle prima della scadenza, in base alla stagionalità.
+      </>
+    ),
+  },
+  {
+    icon: "📄",
+    title: "Esportazione PDF",
+    body: (
+      <>
+        Tocca
+        <Icon><FileDown className="w-3.5 h-3.5" /></Icon>
+        in alto nell&apos;inventario per esportare in PDF. Scegli tra due formati: <strong>Ordine alfabetico</strong> (elenco completo A→Z) oppure <strong>Per box</strong> (ogni box su pagina separata, medicinali ordinati alfabeticamente).
       </>
     ),
   },

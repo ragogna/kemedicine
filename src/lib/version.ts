@@ -1,5 +1,5 @@
-export const APP_VERSION = "1.3.0";
-export const BUILD_DATE = "2026-05-25";
+export const APP_VERSION = "1.4.0";
+export const BUILD_DATE = "2026-05-29";
 export const AUTHOR = "K3kk0";
 
 export type ChangeType = "feature" | "bug" | "optimization";
@@ -10,6 +10,13 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: Array<{ version: string; date: string; changes: ChangeEntry[] }> = [
+  {
+    version: "1.4.0",
+    date: "2026-05-29",
+    changes: [
+      { type: "feature", text: "Esportazione PDF in due formati: ordine alfabetico o raggruppato per box con salto pagina" },
+    ],
+  },
   {
     version: "1.3.0",
     date: "2026-05-25",
