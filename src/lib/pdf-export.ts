@@ -75,7 +75,8 @@ export async function exportMedicinePDF(
   const isoDate = new Date().toISOString().slice(0, 10);
 
   if (mode === "label" && labelSize) {
-    const doc = new jsPDF({ unit: "mm", format: [labelSize.width, labelSize.height] });
+    const orientation = labelSize.width > labelSize.height ? "landscape" : "portrait";
+    const doc = new jsPDF({ unit: "mm", format: [labelSize.width, labelSize.height], orientation });
     const margin = 4;
     const usableW = labelSize.width - margin * 2;
     const expiryColW = Math.min(28, usableW * 0.32);
@@ -84,7 +85,7 @@ export async function exportMedicinePDF(
     let first = true;
 
     for (const [, { config, items }] of sortedGroups) {
-      if (!first) doc.addPage([labelSize.width, labelSize.height]);
+      if (!first) doc.addPage();
       first = false;
 
       const boxName = config?.name ?? "Senza box";

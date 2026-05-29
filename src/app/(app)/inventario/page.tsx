@@ -111,8 +111,9 @@ export default function InventarioPage() {
     setExporting(true);
     try {
       await exportMedicinePDF(medicines, mode, boxConfigs, labelSize);
-    } catch {
-      toast.error("Errore nell'esportazione PDF");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Errore PDF: ${msg}`);
     } finally {
       setExporting(false);
     }
