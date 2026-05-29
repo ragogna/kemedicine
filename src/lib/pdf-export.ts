@@ -75,55 +75,102 @@ export async function exportMedicinePDF(
   const isoDate = new Date().toISOString().slice(0, 10);
 
   if (mode === "label" && labelSize) {
-    // portrait: smaller dim first to avoid jsPDF recursion on equal/landscape formats
+    // Always portrait: smaller dim = width, larger = height
     const fw = Math.min(labelSize.width, labelSize.height);
     const fh = Math.max(labelSize.width, labelSize.height);
-    const doc = new jsPDF({ unit: "mm", format: [fw, fh] });
-    const margin = 4;
-    const usableW = fw - margin * 2;
-    const expiryColW = Math.min(28, usableW * 0.32);
+
+    // Tile labels on A4
+    const A4W = 210, A4H = 297;
+    const sheetMargin = 2;
+    const gap = 2;
+    const cols = Math.max(1, Math.floor((A4W - 2 * sheetMargin + gap) / (fw + gap)));
+    const rows = Math.max(1, Math.floor((A4H - 2 * sheetMargin + gap) / (fh + gap)));
+    const perPage = cols * rows;
+
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+    const lm = 3;        // label internal margin
+    const headerH = 8;   // box name + separator line
+    const contentH = fh - 2 * lm - headerH;
+    const contentW = fw - 2 * lm;
+    const mmPerPt = 0.352777;
 
     const sortedGroups = buildBoxGroups(medicines, boxConfigs);
-    let first = true;
 
-    for (const [, { config, items }] of sortedGroups) {
-      if (!first) doc.addPage();
-      first = false;
+    sortedGroups.forEach(([, { config, items }], idx) => {
+      if (idx > 0 && idx % perPage === 0) doc.addPage();
+
+      const slot = idx % perPage;
+      const col = slot % cols;
+      const row = Math.floor(slot / cols);
+      const ox = sheetMargin + col * (fw + gap);
+      const oy = sheetMargin + row * (fh + gap);
 
       const boxName = config?.name ?? "Senza box";
       const boxColor: [number, number, number] = config?.color
         ? hexToRgb(config.color)
         : [80, 80, 80];
 
-      doc.setFontSize(10);
+      // Cut-guide border
+      doc.setDrawColor(190, 190, 190);
+      doc.setLineWidth(0.2);
+      doc.rect(ox, oy, fw, fh);
+
+      // Box name
+      doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(boxColor[0], boxColor[1], boxColor[2]);
-      doc.text(boxName, margin, margin + 4);
+      let bName = boxName;
+      while (bName.length > 1 && doc.getTextWidth(bName) > contentW - 15) bName = bName.slice(0, -1);
+      if (bName.length < boxName.length) bName = bName.slice(0, -1) + "…";
+      doc.text(bName, ox + lm, oy + lm + 4);
 
-      // date right-aligned (manual to avoid jsPDF align recursion)
-      doc.setFontSize(6);
+      // Print date (top right, tiny)
+      doc.setFontSize(5);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(160, 160, 160);
-      const dateW = doc.getTextWidth(date);
-      doc.text(date, fw - margin - dateW, margin + 4);
+      const dw = doc.getTextWidth(date);
+      doc.text(date, ox + fw - lm - dw, oy + lm + 4);
+
+      // Separator
+      doc.setDrawColor(boxColor[0], boxColor[1], boxColor[2]);
+      doc.setLineWidth(0.3);
+      doc.line(ox + lm, oy + lm + 6, ox + fw - lm, oy + lm + 6);
+
+      // Dynamic font size to fit all items
+      const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name, "it"));
+      let fs = 8;
+      let lh = fs * 1.15 * mmPerPt + 0.6;
+      while (sorted.length * lh > contentH && fs > 4.5) {
+        fs -= 0.25;
+        lh = fs * 1.15 * mmPerPt + 0.6;
+      }
 
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(fs);
 
-      const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name, "it"));
+      let y = oy + lm + headerH;
+      for (const m of sorted) {
+        if (y + lh > oy + fh - lm) break;
 
-      autoTable(doc, {
-        head: [["Nome", "Scadenza"]],
-        body: sorted.map((m) => [m.name, formatDate(m.expiryDate)]),
-        startY: margin + 7,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 7, cellPadding: 1.5, overflow: "ellipsize" },
-        headStyles: { fillColor: boxColor, textColor: 255, fontSize: 7, cellPadding: 1.5 },
-        columnStyles: { 1: { cellWidth: expiryColW, halign: "center" } },
-        tableWidth: usableW,
-      });
-    }
+        const dateStr = formatDate(m.expiryDate);
+        const dateStrW = doc.getTextWidth(dateStr);
+        const maxNameW = contentW - dateStrW - 2;
 
-    doc.save(`kemedicine-cartellini-${isoDate}.pdf`);
+        let name = m.name;
+        while (name.length > 1 && doc.getTextWidth(name) > maxNameW) name = name.slice(0, -1);
+        if (name.length < m.name.length) name = name.slice(0, -1) + "…";
+
+        doc.setTextColor(40, 40, 40);
+        doc.text(name, ox + lm, y);
+        doc.setTextColor(110, 110, 110);
+        doc.text(dateStr, ox + fw - lm - dateStrW, y);
+
+        y += lh;
+      }
+    });
+
+    doc.save(`kemedicine-cartellini-${fw}x${fh}mm-${isoDate}.pdf`);
     return;
   }
 
