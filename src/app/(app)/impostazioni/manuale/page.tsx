@@ -96,7 +96,7 @@ const SECTIONS: { icon: string; title: string; body: ReactNode }[] = [
       <>
         Tocca
         <Icon><FileDown className="w-3.5 h-3.5" /></Icon>
-        in alto nell&apos;inventario per esportare in PDF. Scegli tra due formati: <strong>Ordine alfabetico</strong> (elenco completo A→Z) oppure <strong>Per box</strong> (ogni box su pagina separata, medicinali ordinati alfabeticamente).
+        in alto nell&apos;inventario per esportare in PDF. Tre formati disponibili: <strong>Ordine alfabetico</strong> (elenco completo A→Z), <strong>Per box</strong> (ogni box su pagina separata A4), oppure <strong>Cartellino personalizzato</strong> — inserisci larghezza e altezza in mm per ottenere un PDF da stampare e attaccare fuori dal box (default 85×55 mm).
       </>
     ),
   },

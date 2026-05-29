@@ -14,7 +14,7 @@ export const CHANGELOG: Array<{ version: string; date: string; changes: ChangeEn
     version: "1.4.0",
     date: "2026-05-29",
     changes: [
-      { type: "feature", text: "Esportazione PDF in due formati: ordine alfabetico o raggruppato per box con salto pagina" },
+      { type: "feature", text: "Esportazione PDF in tre formati: ordine alfabetico, per box (A4), cartellino dimensione personalizzata (mm)" },
     ],
   },
   {
