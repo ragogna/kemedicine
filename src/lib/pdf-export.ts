@@ -131,17 +131,15 @@ export async function exportMedicinePDF(
       const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name, "it"));
 
       autoTable(doc, {
-        head: [["Nome", "Marca", "Categoria", "Scadenza", "Qtà", "Stato"]],
-        body: sorted.map((m) => makeRow(m, false)),
+        head: [["Nome", "Scadenza"]],
+        body: sorted.map((m) => [m.name, formatDate(m.expiryDate)]),
         startY: headerEnd + 10,
-        styles: { fontSize: 8, cellPadding: 2 },
+        styles: { fontSize: 10, cellPadding: 3 },
         headStyles: { fillColor: boxColor, textColor: 255 },
         columnStyles: {
-          0: { cellWidth: 45 },
-          2: { cellWidth: 30 },
-          3: { cellWidth: 22 },
+          0: { cellWidth: 130 },
+          1: { cellWidth: 40 },
         },
-        didParseCell: (data) => applyStatusStyle(data, 5),
       });
     }
   }
