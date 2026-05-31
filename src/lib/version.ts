@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.4.2";
+export const APP_VERSION = "1.4.3";
 export const BUILD_DATE = "2026-05-31";
 export const AUTHOR = "K3kk0";
 
@@ -10,6 +10,13 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: Array<{ version: string; date: string; changes: ChangeEntry[] }> = [
+  {
+    version: "1.4.3",
+    date: "2026-05-31",
+    changes: [
+      { type: "feature", text: "Cartellino PDF — i biglietti della dimensione scelta vengono tassellati sul foglio A4: quanti più cartellini possibile per pagina, pronti da ritagliare (un solo biglietto per box, tutte le medicine dentro)" },
+    ],
+  },
   {
     version: "1.4.2",
     date: "2026-05-31",

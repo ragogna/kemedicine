@@ -96,7 +96,7 @@ const SECTIONS: { icon: string; title: string; body: ReactNode }[] = [
       <>
         Tocca
         <Icon><FileDown className="w-3.5 h-3.5" /></Icon>
-        in alto nell&apos;inventario per esportare in PDF. Tre formati disponibili: <strong>Ordine alfabetico</strong> (elenco completo A→Z), <strong>Per box</strong> (ogni box su pagina separata A4), oppure <strong>Cartellino personalizzato</strong> — inserisci larghezza e altezza in cm: ogni box diventa un biglietto della dimensione scelta (una pagina PDF per box) con tutte le sue medicine, font e colonne adattati in automatico per farcele stare tutte. Stampa e attacca fuori dal box.
+        in alto nell&apos;inventario per esportare in PDF. Tre formati disponibili: <strong>Ordine alfabetico</strong> (elenco completo A→Z), <strong>Per box</strong> (ogni box su pagina separata A4), oppure <strong>Cartellino personalizzato</strong> — inserisci larghezza e altezza in cm: ogni box diventa un biglietto di quella dimensione con tutte le sue medicine (font e colonne adattati in automatico per farcele stare tutte). I biglietti vengono tassellati sul foglio A4 — quanti più ne entrano per pagina — pronti da ritagliare e attaccare fuori dal box.
       </>
     ),
   },

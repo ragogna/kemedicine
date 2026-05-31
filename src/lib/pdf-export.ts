@@ -78,90 +78,93 @@ export async function exportMedicinePDF(
   const isoDate = new Date().toISOString().slice(0, 10);
 
   if (mode === "label" && labelSize) {
-    // One box per page; page = ticket size (user dimensions). All items always fit.
+    // Tile one ticket per box onto A4 sheets. Each ticket = the user's dims
+    // (respected literally); as many tickets per A4 as fit. All of a box's
+    // medicines always fit inside its single ticket (dynamic font + columns).
     const fw = labelSize.width;
     const fh = labelSize.height;
-    const format: [number, number] = [fw, fh];
 
-    const doc = new jsPDF({ unit: "mm", format });
+    const A4W = 210, A4H = 297;
+    const sheetMargin = 5;
+    const gap = 3;
+    const cols = Math.max(1, Math.floor((A4W - 2 * sheetMargin + gap) / (fw + gap)));
+    const rows = Math.max(1, Math.floor((A4H - 2 * sheetMargin + gap) / (fh + gap)));
+    const perPage = cols * rows;
 
-    const lm = 3;          // page internal margin
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+    const lm = 3;          // ticket internal margin
     const headerH = 8;     // box name + separator line
     const colGap = 3;      // gap between item columns
     const minColW = 22;    // narrowest readable column
     const mmPerPt = 0.352777;
 
     const contentW = fw - 2 * lm;
-    const contentTop = lm + headerH;
-    const contentH = fh - lm - contentTop;
+    const contentH = fh - 2 * lm - headerH;
     const maxCols = Math.max(1, Math.floor((contentW + colGap) / (minColW + colGap)));
 
-    const groups = buildBoxGroups(medicines, boxConfigs);
+    doc.setFontSize(5);
+    const dateW = doc.getTextWidth(date);
 
-    groups.forEach(([, { config, items }], idx) => {
-      if (idx > 0) doc.addPage(format);
-
+    const drawTicket = (ox: number, oy: number, config: BoxConfig | null, items: Medicine[]) => {
       const boxName = config?.name ?? "Senza box";
       const boxColor: [number, number, number] = config?.color
         ? hexToRgb(config.color)
         : [80, 80, 80];
 
-      // Thin cut-guide border at ticket edge
-      doc.setDrawColor(200, 200, 200);
+      // Dashed cut-guide border
+      doc.setDrawColor(170, 170, 170);
       doc.setLineWidth(0.2);
-      doc.rect(0.3, 0.3, fw - 0.6, fh - 0.6);
+      doc.setLineDashPattern([1.2, 1.2], 0);
+      doc.rect(ox, oy, fw, fh);
+      doc.setLineDashPattern([], 0);
 
       // Box name (truncated to leave room for date)
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(boxColor[0], boxColor[1], boxColor[2]);
-      const dateW = (() => {
-        doc.setFontSize(5);
-        const w = doc.getTextWidth(date);
-        doc.setFontSize(9);
-        return w;
-      })();
       let bName = boxName;
       while (bName.length > 1 && doc.getTextWidth(bName) > contentW - dateW - 3) bName = bName.slice(0, -1);
       if (bName.length < boxName.length) bName = bName.slice(0, -1) + "…";
-      doc.text(bName, lm, lm + 4);
+      doc.text(bName, ox + lm, oy + lm + 4);
 
       // Print date (top right, tiny)
       doc.setFontSize(5);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(160, 160, 160);
-      doc.text(date, fw - lm - dateW, lm + 4);
+      doc.text(date, ox + fw - lm - dateW, oy + lm + 4);
 
       // Separator
       doc.setDrawColor(boxColor[0], boxColor[1], boxColor[2]);
       doc.setLineWidth(0.3);
-      doc.line(lm, lm + 6, fw - lm, lm + 6);
+      doc.line(ox + lm, oy + lm + 6, ox + fw - lm, oy + lm + 6);
 
       const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name, "it"));
       const n = sorted.length;
       if (n === 0) return;
 
-      // Pick largest font (and fewest columns) that fits ALL items.
-      let fs = 3.5, lh = 0, rowsPerCol = 1, cols = maxCols;
+      // Pick largest font (and fewest columns) that fits ALL items in the ticket.
+      let fs = 3.5, lh = 0, rowsPerCol = 1, ncols = maxCols;
       for (let trial = 9; trial >= 3.5; trial -= 0.25) {
         const tlh = trial * 1.15 * mmPerPt + 0.5;
         const rpc = Math.max(1, Math.floor(contentH / tlh));
         const need = Math.ceil(n / rpc);
         fs = trial; lh = tlh; rowsPerCol = rpc;
-        if (need <= maxCols) { cols = Math.max(1, need); break; }
-        cols = maxCols; // fallback: smallest font, max columns
+        if (need <= maxCols) { ncols = Math.max(1, need); break; }
+        ncols = maxCols; // fallback: smallest font, max columns
       }
 
-      const colW = (contentW - (cols - 1) * colGap) / cols;
+      const colW = (contentW - (ncols - 1) * colGap) / ncols;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(fs);
+      const contentTop = oy + lm + headerH;
 
       sorted.forEach((m, i) => {
         const c = Math.floor(i / rowsPerCol);
         const r = i % rowsPerCol;
-        if (c >= cols) return; // safety (only if ticket truly too small)
+        if (c >= ncols) return; // safety (only if ticket truly too small)
 
-        const cx = lm + c * (colW + colGap);
+        const cx = ox + lm + c * (colW + colGap);
         const y = contentTop + fs * mmPerPt + r * lh;
 
         const dateStr = formatDate(m.expiryDate);
@@ -177,6 +180,15 @@ export async function exportMedicinePDF(
         doc.setTextColor(110, 110, 110);
         doc.text(dateStr, cx + colW - dw, y);
       });
+    };
+
+    const groups = buildBoxGroups(medicines, boxConfigs);
+    groups.forEach(([, { config, items }], idx) => {
+      if (idx > 0 && idx % perPage === 0) doc.addPage();
+      const slot = idx % perPage;
+      const ox = sheetMargin + (slot % cols) * (fw + gap);
+      const oy = sheetMargin + Math.floor(slot / cols) * (fh + gap);
+      drawTicket(ox, oy, config, items);
     });
 
     doc.save(`kemedicine-cartellini-${fw}x${fh}mm-${isoDate}.pdf`);
