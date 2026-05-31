@@ -49,9 +49,12 @@ function applyStatusStyle(data: any, statusColIndex: number) {
 function buildBoxGroups(medicines: Medicine[], boxConfigs: BoxConfig[]) {
   const groups = new Map<string, { config: BoxConfig | null; items: Medicine[] }>();
   for (const m of medicines) {
-    const key = m.box ?? "__none__";
+    const config = resolveBoxConfig(m.box, boxConfigs);
+    // Normalize the grouping key so legacy "Box 1" and new "box1" collapse into
+    // a single group → one ticket per box (never split by storage format).
+    const key = config?.id ?? m.box ?? "__none__";
     if (!groups.has(key)) {
-      groups.set(key, { config: resolveBoxConfig(m.box, boxConfigs), items: [] });
+      groups.set(key, { config, items: [] });
     }
     groups.get(key)!.items.push(m);
   }

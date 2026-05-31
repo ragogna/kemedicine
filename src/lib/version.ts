@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.4.1";
+export const APP_VERSION = "1.4.2";
 export const BUILD_DATE = "2026-05-31";
 export const AUTHOR = "K3kk0";
 
@@ -10,6 +10,13 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: Array<{ version: string; date: string; changes: ChangeEntry[] }> = [
+  {
+    version: "1.4.2",
+    date: "2026-05-31",
+    changes: [
+      { type: "bug", text: "Cartellino PDF — un solo biglietto per box: i box con medicine in formato misto (vecchio \"Box 1\" + nuovo) non vengono più divisi in più cartellini" },
+    ],
+  },
   {
     version: "1.4.1",
     date: "2026-05-31",
