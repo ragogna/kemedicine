@@ -85,8 +85,8 @@ export async function exportMedicinePDF(
     const fh = labelSize.height;
 
     const A4W = 210, A4H = 297;
-    const sheetMargin = 5;
-    const gap = 3;
+    const sheetMargin = 2;
+    const gap = 2;
     const cols = Math.max(1, Math.floor((A4W - 2 * sheetMargin + gap) / (fw + gap)));
     const rows = Math.max(1, Math.floor((A4H - 2 * sheetMargin + gap) / (fh + gap)));
     const perPage = cols * rows;
