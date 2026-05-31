@@ -1,5 +1,5 @@
-export const APP_VERSION = "1.4.0";
-export const BUILD_DATE = "2026-05-29";
+export const APP_VERSION = "1.4.1";
+export const BUILD_DATE = "2026-05-31";
 export const AUTHOR = "K3kk0";
 
 export type ChangeType = "feature" | "bug" | "optimization";
@@ -10,6 +10,14 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: Array<{ version: string; date: string; changes: ChangeEntry[] }> = [
+  {
+    version: "1.4.1",
+    date: "2026-05-31",
+    changes: [
+      { type: "bug", text: "Cartellino PDF — tutte le medicine di un box ora stanno su un unico biglietto della dimensione scelta (una pagina per box, font e colonne automatici, niente più troncamenti o pagine multiple)" },
+      { type: "optimization", text: "Pulizia codice e revisione generale" },
+    ],
+  },
   {
     version: "1.4.0",
     date: "2026-05-29",
