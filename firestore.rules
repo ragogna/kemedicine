@@ -35,6 +35,19 @@ service cloud.firestore {
       match /settings/{settingId} {
         allow read, write: if isMember();
       }
+
+      // Workspace non-default: medicines + settings annidati
+      match /workspaces/{workspaceId} {
+        allow read, write: if isMember();
+
+        match /medicines/{medicineId} {
+          allow read, write: if isMember();
+        }
+
+        match /settings/{settingId} {
+          allow read, write: if isMember();
+        }
+      }
     }
 
     match /{document=**} {
