@@ -254,10 +254,11 @@ export default function ScannerPage() {
       toast.error("Formato data non valido. Usa MM/AAAA o GG/MM/AAAA");
       return;
     }
+    if (!familyId || !user) { toast.error("Workspace non pronto, riprova"); return; }
     setSaving(true);
     try {
       const id = await addMedicine({
-        familyId: familyId!,
+        familyId,
         name: form.name,
         brand: form.brand,
         activeIngredient: form.activeIngredient,
@@ -266,8 +267,8 @@ export default function ScannerPage() {
         quantity: Number(form.quantity),
         unit: form.unit,
         notes: form.notes,
-        barcode: form.barcode || undefined,
-        addedBy: user!.uid,
+        ...(form.barcode ? { barcode: form.barcode } : {}),
+        addedBy: user.uid,
         addedAt: new Date().toISOString(),
         importBatchId: crypto.randomUUID(),
       } as Omit<Medicine, "id">);
@@ -280,14 +281,20 @@ export default function ScannerPage() {
           category: form.category,
         }).then((info) => {
           const ref = workspaceId === "default"
-            ? doc(db, "families", familyId!, "medicines", id)
-            : doc(db, "families", familyId!, "workspaces", workspaceId, "medicines", id);
+            ? doc(db, "families", familyId, "medicines", id)
+            : doc(db, "families", familyId, "workspaces", workspaceId, "medicines", id);
           updateDoc(ref, { info }).catch(() => {});
         }).catch(() => {});
       }
       router.push("/inventario");
-    } catch {
-      toast.error("Errore nel salvataggio");
+    } catch (e: unknown) {
+      console.error("[manual save]", e);
+      const err = e as { code?: string; message?: string };
+      toast.error(
+        err.code === "permission-denied"
+          ? "Permessi insufficienti su questo workspace"
+          : `Errore nel salvataggio: ${err.message ?? err.code ?? "sconosciuto"}`
+      );
     } finally {
       setSaving(false);
     }

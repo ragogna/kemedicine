@@ -66,12 +66,18 @@ export function EditMedicineSheet({ medicine, open, onClose, onSave, boxConfigs 
         quantity: Number(form.quantity) || 0,
         unit: form.unit ?? "pz",
         notes: form.notes ?? "",
-        box: (form as { box?: string }).box || undefined,
+        box: (form as { box?: string }).box ?? "",
       });
       toast.success("Medicinale aggiornato");
       onClose();
-    } catch {
-      toast.error("Errore nel salvataggio");
+    } catch (e: unknown) {
+      console.error("[edit save]", e);
+      const err = e as { code?: string; message?: string };
+      toast.error(
+        err.code === "permission-denied"
+          ? "Permessi insufficienti su questo workspace"
+          : `Errore nel salvataggio: ${err.message ?? err.code ?? "sconosciuto"}`
+      );
     } finally {
       setSaving(false);
     }

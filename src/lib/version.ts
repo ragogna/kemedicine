@@ -1,5 +1,5 @@
-export const APP_VERSION = "1.4.3";
-export const BUILD_DATE = "2026-05-31";
+export const APP_VERSION = "1.4.4";
+export const BUILD_DATE = "2026-10-14";
 export const AUTHOR = "K3kk0";
 
 export type ChangeType = "feature" | "bug" | "optimization";
@@ -10,6 +10,14 @@ export interface ChangeEntry {
 }
 
 export const CHANGELOG: Array<{ version: string; date: string; changes: ChangeEntry[] }> = [
+  {
+    version: "1.4.4",
+    date: "2026-10-14",
+    changes: [
+      { type: "bug", text: "Aggiunta manuale medicinale — il salvataggio non va più in errore quando non c'è il codice a barre" },
+      { type: "optimization", text: "I messaggi di errore nel salvataggio ora mostrano la causa reale invece di un generico \"Errore nel salvataggio\"" },
+    ],
+  },
   {
     version: "1.4.3",
     date: "2026-05-31",
